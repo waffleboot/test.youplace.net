@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"golang.org/x/net/html"
+)
 
 func TestForm(t *testing.T) {
 	resp := `
@@ -17,7 +22,7 @@ func TestForm(t *testing.T) {
     <p><button type="submit">Submit</button></p>
 	</form>
 	`
-	data, _ := form1(resp)
+	data := parseString(resp)
 	if data.Get("ajivmQlpOk1s8O3T") != "test" {
 		t.Error("ajivmQlpOk1s8O3T")
 	}
@@ -31,4 +36,26 @@ func TestForm(t *testing.T) {
 		t.Error("BOb1kMQ8T9lu7NPt")
 	}
 	t.Log(data)
+}
+
+func TestHtml(t *testing.T) {
+	r := strings.NewReader(`<html><a href="link">test</a></html>`)
+	z := html.NewTokenizer(r)
+	for {
+		tt := z.Next()
+		if z.Err() != nil {
+			t.Log(z.Err())
+			return
+		}
+		tn := z.Token()
+		if tt == html.StartTagToken && tn.Data == "a" {
+			for _, a := range tn.Attr {
+				if a.Key == "href" {
+					t.Log(a.Namespace, a.Val)
+				}
+			}
+
+		}
+
+	}
 }

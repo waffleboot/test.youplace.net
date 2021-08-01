@@ -72,6 +72,9 @@ func (c *cli) parseInitialPage() error {
 	if err != nil {
 		return err
 	}
+	if link == "" {
+		return errors.New("not found")
+	}
 	c.url = mainUrl + link
 	return nil
 }

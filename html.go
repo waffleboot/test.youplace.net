@@ -1,13 +1,14 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 var name = regexp.MustCompile(`name="([^"]+)"`)
@@ -22,13 +23,27 @@ var option = regexp.MustCompile(`<option[^>]+>`)
 
 var passed = regexp.MustCompile(`Test successfully passed`)
 
-var start = regexp.MustCompile(`<a href="(/question/1)"><button>Start test</button></a>`)
-
 func findQuestion1Link(resp string) (string, error) {
-	for _, link := range start.FindStringSubmatch(resp)[1:] {
-		return link, nil
+	var ans string
+	r := strings.NewReader(resp)
+	z := html.NewTokenizer(r)
+	for {
+		tt := z.Next()
+		if err := z.Err(); err != nil {
+			if err != io.EOF {
+				return "", err
+			}
+			return ans, nil
+		}
+		if tn := z.Token(); tt == html.StartTagToken && tn.Data == "a" {
+			for _, a := range tn.Attr {
+				if a.Key == "href" {
+					ans = a.Val
+				}
+			}
+
+		}
 	}
-	return "", errors.New("not found")
 }
 
 func parseString(resp string) url.Values {
