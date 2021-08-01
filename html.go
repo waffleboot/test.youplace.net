@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -30,7 +31,7 @@ func findQuestion1Link(resp string) (string, error) {
 	return "", errors.New("not found")
 }
 
-func form1(resp string) url.Values {
+func parseString(resp string) url.Values {
 	if passed.FindString(resp) != "" {
 		return nil
 	}
@@ -64,12 +65,12 @@ func form1(resp string) url.Values {
 	return data
 }
 
-func form2(resp io.Reader) (data url.Values, err error) {
+func parseReader(resp io.Reader) (data url.Values, err error) {
 	var b strings.Builder
 	if _, err = io.Copy(&b, resp); err != nil {
 		return
 	}
-	fmt.Println(b.String())
-	data = form1(b.String())
+	fmt.Fprintln(os.Stderr, b.String())
+	data = parseString(b.String())
 	return
 }

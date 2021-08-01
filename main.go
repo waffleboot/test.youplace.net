@@ -13,12 +13,14 @@ import (
 
 var rejected = errors.New("rejected")
 
+const mainUrl = "http://test.youplace.net"
+
 type cli struct {
 	client *http.Client // вопрос, а может *http.Client
 	url    string
 }
 
-func (c *cli) checkRedirect(req *http.Request, via []*http.Request) error {
+func (c *cli) checkRedirect(req *http.Request, _ []*http.Request) error {
 	c.url = req.URL.String()
 	return nil
 }
@@ -50,12 +52,12 @@ func (c *cli) get(url string) (string, error) {
 }
 
 func (c *cli) req1() error {
-	body, err := c.get("http://test.youplace.net/")
+	body, err := c.get(mainUrl)
 	link, err := findQuestion1Link(body)
 	if err != nil {
 		return err
 	}
-	c.url = "http://test.youplace.net" + link
+	c.url = mainUrl + link
 	return nil
 }
 
@@ -64,7 +66,7 @@ func (c *cli) req2() error {
 	if err != nil {
 		return err
 	}
-	for data := form1(body); err == nil && data != nil; data, err = c.post(data) {
+	for data := parseString(body); err == nil && data != nil; data, err = c.post(data) {
 	}
 	return err
 }
@@ -75,7 +77,10 @@ func (c *cli) post(data url.Values) (url.Values, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	return form2(resp.Body)
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		return nil, rejected
+	}
+	return parseReader(resp.Body)
 }
 
 func (c *cli) run() (err error) {
