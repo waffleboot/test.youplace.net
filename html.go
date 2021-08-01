@@ -5,13 +5,11 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"strings"
 
 	"golang.org/x/net/html"
 )
 
-func findQuestion1Link(resp string) (ans string, err error) {
-	r := strings.NewReader(resp)
+func findQuestion1Link(r io.Reader) (ans string, err error) {
 	z := html.NewTokenizer(r)
 	for {
 		tt := z.Next()
@@ -45,9 +43,8 @@ func ntv(tn html.Token) (n string, t string, v string) {
 	return
 }
 
-func parseString(resp string) (data url.Values, err error) {
+func parseHtml(r io.Reader) (data url.Values, err error) {
 	data = url.Values{}
-	r := strings.NewReader(resp)
 	z := html.NewTokenizer(r)
 	var gn string
 	for {
@@ -85,12 +82,4 @@ func parseString(resp string) (data url.Values, err error) {
 			return nil, nil
 		}
 	}
-}
-
-func parseReader(resp io.Reader) (data url.Values, err error) {
-	var b strings.Builder
-	if _, err = io.Copy(&b, resp); err != nil {
-		return
-	}
-	return parseString(b.String())
 }

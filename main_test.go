@@ -22,7 +22,7 @@ func TestForm(t *testing.T) {
     <p><button type="submit">Submit</button></p>
 	</form>
 	`
-	data, _ := parseString(resp)
+	data, _ := parseHtml(strings.NewReader(resp))
 	if data.Get("ajivmQlpOk1s8O3T") != "test" {
 		t.Error("ajivmQlpOk1s8O3T")
 	}
