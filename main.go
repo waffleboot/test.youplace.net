@@ -9,7 +9,6 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"time"
 )
 
 var rejected = errors.New("rejected")
@@ -50,38 +49,24 @@ func (c *cli) get(url string) (string, error) {
 	return b.String(), err
 }
 
-func (c *cli) req1() (err error) {
-	resp, err := c.get("http://test.youplace.net/")
-	link, err := form3(resp)
+func (c *cli) req1() error {
+	body, err := c.get("http://test.youplace.net/")
+	link, err := findQuestion1Link(body)
 	if err != nil {
 		return err
 	}
 	c.url = "http://test.youplace.net" + link
-	return
+	return nil
 }
 
 func (c *cli) req2() error {
-	resp, err := c.get(c.url)
+	body, err := c.get(c.url)
 	if err != nil {
 		return err
 	}
-	data, err := form1(resp)
-	if err != nil {
-		if err != io.EOF {
-			return err
-		}
-		return nil
+	for data := form1(body); err == nil && data != nil; data, err = c.post(data) {
 	}
-	for {
-		data, err = c.post(data)
-		if err != nil {
-			if err != io.EOF {
-				return err
-			}
-			return nil
-		}
-		<-time.After(1 * time.Second)
-	}
+	return err
 }
 
 func (c *cli) post(data url.Values) (url.Values, error) {
