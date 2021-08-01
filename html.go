@@ -5,35 +5,21 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
-var name = regexp.MustCompile(`name="([^"]+)"`)
-
-var input = regexp.MustCompile(`<input[^>]+>`)
-
-var value = regexp.MustCompile(`value="([^"]+)"`)
-
-var gselect = regexp.MustCompile(`<select[^>]+>.*</select>`)
-
-var option = regexp.MustCompile(`<option[^>]+>`)
-
-var passed = regexp.MustCompile(`Test successfully passed`)
-
-func findQuestion1Link(resp string) (string, error) {
-	var ans string
+func findQuestion1Link(resp string) (ans string, err error) {
 	r := strings.NewReader(resp)
 	z := html.NewTokenizer(r)
 	for {
 		tt := z.Next()
-		if err := z.Err(); err != nil {
-			if err != io.EOF {
-				return "", err
+		if err = z.Err(); err != nil {
+			if err == io.EOF {
+				err = nil
 			}
-			return ans, nil
+			return
 		}
 		if tn := z.Token(); tt == html.StartTagToken && tn.Data == "a" {
 			for _, a := range tn.Attr {
@@ -41,43 +27,64 @@ func findQuestion1Link(resp string) (string, error) {
 					ans = a.Val
 				}
 			}
-
 		}
 	}
 }
 
-func parseString(resp string) url.Values {
-	if passed.FindString(resp) != "" {
-		return nil
-	}
-	data := url.Values{}
-	radio := make(map[string]string)
-	for _, s := range input.FindAllString(resp, -1) {
-		n := name.FindStringSubmatch(s)[1]
-		if strings.Contains(s, `type="text"`) {
-			data.Add(n, "test")
-		} else if strings.Contains(s, `type="radio"`) {
-			p := radio[n]
-			v := value.FindStringSubmatch(s)[1]
-			if len(v) > len(p) {
-				radio[n] = v
-			}
+func ntv(tn html.Token) (n string, t string, v string) {
+	for _, a := range tn.Attr {
+		switch a.Key {
+		case "name":
+			n = a.Val
+		case "type":
+			t = a.Val
+		case "value":
+			v = a.Val
 		}
 	}
-	for _, s := range gselect.FindAllString(resp, -1) {
-		n := name.FindStringSubmatch(s)[1]
-		for _, o := range option.FindAllString(s, -1)[1:] {
-			p := radio[n]
-			v := value.FindStringSubmatch(o)[1]
-			if len(v) > len(p) {
-				radio[n] = v
+	return
+}
+
+func parseString(resp string) (data url.Values, err error) {
+	data = url.Values{}
+	r := strings.NewReader(resp)
+	z := html.NewTokenizer(r)
+	var gn string
+	for {
+		tt := z.Next()
+		if err = z.Err(); err != nil {
+			if err == io.EOF {
+				err = nil
 			}
+			return
+		}
+		tn := z.Token()
+		if tt == html.StartTagToken {
+			switch tn.Data {
+			case "input":
+				fmt.Fprintln(os.Stderr, tn)
+				n, t, v := ntv(tn)
+				if t == "text" {
+					data.Add(n, "test")
+				} else if t == "radio" {
+					if p := data.Get(n); len(v) > len(p) {
+						data.Set(n, v)
+					}
+				}
+			case "select":
+				fmt.Fprintln(os.Stderr, tn)
+				gn, _, _ = ntv(tn)
+			case "option":
+				fmt.Fprintln(os.Stderr, tn)
+				_, _, v := ntv(tn)
+				if p := data.Get(gn); len(v) > len(p) {
+					data.Set(gn, v)
+				}
+			}
+		} else if tt == html.TextToken && tn.Data == "Test successfully passed" {
+			return nil, nil
 		}
 	}
-	for k, v := range radio {
-		data.Add(k, v)
-	}
-	return data
 }
 
 func parseReader(resp io.Reader) (data url.Values, err error) {
@@ -85,7 +92,5 @@ func parseReader(resp io.Reader) (data url.Values, err error) {
 	if _, err = io.Copy(&b, resp); err != nil {
 		return
 	}
-	fmt.Fprintln(os.Stderr, b.String())
-	data = parseString(b.String())
-	return
+	return parseString(b.String())
 }

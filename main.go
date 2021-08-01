@@ -84,7 +84,7 @@ func (c *cli) parseNextPages() error {
 	if err != nil {
 		return err
 	}
-	for data := parseString(body); err == nil && data != nil; data, err = c.post(data) {
+	for data, err := parseString(body); err == nil && data != nil; data, err = c.post(data) {
 	}
 	return err
 }
