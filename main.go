@@ -73,7 +73,7 @@ func (c *cli) req2() error {
 		return nil
 	}
 	for {
-		data, err = c.req3(data)
+		data, err = c.post(data)
 		if err != nil {
 			if err != io.EOF {
 				return err
@@ -84,7 +84,7 @@ func (c *cli) req2() error {
 	}
 }
 
-func (c *cli) req3(data url.Values) (url.Values, error) {
+func (c *cli) post(data url.Values) (url.Values, error) {
 	resp, err := c.client.PostForm(c.url, data)
 	if err != nil {
 		return nil, err
