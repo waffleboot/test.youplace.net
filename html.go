@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"net/url"
 	"regexp"
@@ -18,6 +19,15 @@ var gselect = regexp.MustCompile(`<select[^>]+>.*</select>`)
 var option = regexp.MustCompile(`<option[^>]+>`)
 
 var passed = regexp.MustCompile(`Test successfully passed`)
+
+var start = regexp.MustCompile(`<a href="(/question/1)"><button>Start test</button></a>`)
+
+func form3(resp string) (string, error) {
+	for _, link := range start.FindStringSubmatch(resp)[1:] {
+		return link, nil
+	}
+	return "", errors.New("not found")
+}
 
 func form1(resp string) (url.Values, error) {
 	if passed.FindString(resp) != "" {

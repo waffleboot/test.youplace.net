@@ -51,9 +51,12 @@ func (c *cli) get(url string) (string, error) {
 }
 
 func (c *cli) req1() (err error) {
-	_, err = c.get("http://test.youplace.net/")
-	c.url = "http://test.youplace.net/question/1"
-	// TODO parse link
+	resp, err := c.get("http://test.youplace.net/")
+	link, err := form3(resp)
+	if err != nil {
+		return err
+	}
+	c.url = "http://test.youplace.net" + link
 	return
 }
 
