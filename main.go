@@ -10,8 +10,6 @@ import (
 	"net/url"
 )
 
-var rejected = errors.New("rejected")
-
 const mainUrl = "http://test.youplace.net"
 
 type cli struct {
@@ -37,26 +35,30 @@ func newCli() (*cli, error) {
 }
 
 func (c *cli) get(url string) (io.ReadCloser, error) {
-	resp, err := c.client.Get(url) // не очень понятно, в случае 503 вернется ошибка или статус код надо проверять?
-	if err != nil {
-		return nil, err
+	for {
+		resp, err := c.client.Get(url) // не очень понятно, в случае 503 вернется ошибка или статус код надо проверять?
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == http.StatusServiceUnavailable {
+			continue
+		}
+		return resp.Body, err
 	}
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, rejected
-	}
-	return resp.Body, err
 }
 
 func (c *cli) post(data url.Values) (url.Values, error) {
-	resp, err := c.client.PostForm(c.url, data)
-	if err != nil {
-		return nil, err
+	for {
+		resp, err := c.client.PostForm(c.url, data)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusServiceUnavailable {
+			continue
+		}
+		return parseHtml(resp.Body)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, rejected
-	}
-	return parseHtml(resp.Body)
 }
 
 func (c *cli) parseInitialPage() error {
