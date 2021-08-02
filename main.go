@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"time"
 )
 
 const mainUrl = "http://test.youplace.net"
@@ -28,7 +29,8 @@ func newCli() (*cli, error) {
 		return nil, err
 	}
 	c := &cli{client: &http.Client{
-		Jar: jar,
+		Timeout: 1 * time.Minute,
+		Jar:     jar,
 	}}
 	c.client.CheckRedirect = c.saveRedirect
 	return c, nil
